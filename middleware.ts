@@ -25,12 +25,9 @@ export async function middleware(req: NextRequest) {
 
   const { data } = await supabase.auth.getSession()
 
-  const isDashboard = req.nextUrl.pathname.startsWith("/dashboard")
-
-  if (isDashboard && !data.session) {
+  if (!data.session && req.nextUrl.pathname.startsWith("/dashboard")) {
     return NextResponse.redirect(new URL("/login", req.url))
   }
-  console.log("MIDDLEWARE:", req.nextUrl.pathname)
 
   return res
 }
