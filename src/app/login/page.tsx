@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -30,6 +30,21 @@ export default function LoginPage() {
 
     router.push("/dashboard")
   }
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        router.push("/dashboard");
+      }
+    };
+
+    checkUser();
+  }, []);
+
 
   return (
     <main className="relative flex min-h-screen items-center justify-center px-4 overflow-hidden">

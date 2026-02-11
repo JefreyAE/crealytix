@@ -17,7 +17,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan")
+    .select("*")
     .eq("id", user.id)
     .single();
 
@@ -47,16 +47,15 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-[#0f172a]">
-
       <DashboardSidebar
-        email={user.email || ""}
-        plan={plan}
-        accountCount={accountCount}
+        email={user.email!}
+        fullName={profile?.full_name}
+        avatarUrl={profile?.avatar_url}
+        plan={profile?.plan || "free"}
+        accountCount={metrics?.length || 0}
         accountLimit={accountLimit}
       />
-
       <div className="flex-1 flex flex-col">
-
         <header className="h-16 bg-white dark:bg-[#111827] border-b dark:border-gray-800 flex items-center px-8 shadow-sm">
           <h1 className="text-lg font-semibold">
             Dashboard
