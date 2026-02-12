@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchYouTubeChannel } from "@/lib/youtube";
 
 import MetricCard from "@/components/MetricCard";
-import YoutubeSubscribersChart from "@/components/YoutubeSubscribersChart";
+import AccountMetricChart from "@/components/AccountMetricChart";
 
 /* -------------------------------------------------------------------------- */
 /*                                   TYPES                                    */
@@ -20,12 +20,6 @@ type YouTubeChannel = {
   last_synced_at: string | null;
 };
 
-type ChannelStat = {
-  recorded_at: string;
-  subscriber_count: number;
-  view_count: number;
-};
-
 /* -------------------------------------------------------------------------- */
 /*                                 CONSTANTS                                  */
 /* -------------------------------------------------------------------------- */
@@ -37,16 +31,13 @@ const TEN_MINUTES = 10 * 60 * 1000;
 /* -------------------------------------------------------------------------- */
 
 function getAccountLimit(plan: Plan) {
-  switch (plan) {
-    case "free":
-      return 1;
-    case "pro":
-      return 5;
-    case "agency":
-      return Infinity;
-    default:
-      return 1;
-  }
+  const limits: Record<Plan, number> = {
+    free: 1,
+    pro: 5,
+    agency: Infinity,
+  };
+
+  return limits[plan];
 }
 
 function timeAgo(dateString: string | null, now: number) {
@@ -60,21 +51,19 @@ function timeAgo(dateString: string | null, now: number) {
   if (minutes < 60) return `${minutes} minutes ago`;
 
   const hours = Math.floor(minutes / 60);
-  if (hours === 1) return "1 hour ago";
-
-  return `${hours} hours ago`;
+  return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
 }
 
 async function refreshChannelIfNeeded(
   supabase: any,
-  channel: YouTubeChannel
+  channel: YouTubeChannel,
+  now: number
 ) {
   const lastSynced = channel.last_synced_at
     ? new Date(channel.last_synced_at).getTime()
     : 0;
 
-  const shouldRefresh = Date.now() - lastSynced > TEN_MINUTES;
-  if (!shouldRefresh) return;
+  if (now - lastSynced <= TEN_MINUTES) return false;
 
   try {
     const stats = await fetchYouTubeChannel(channel.channel_id);
@@ -107,8 +96,11 @@ async function refreshChannelIfNeeded(
         video_count: stats.videoCount,
       });
     }
+
+    return true;
   } catch (error) {
-    console.error("Failed to refresh channel:", error);
+    console.error("Refresh failed:", error);
+    return false;
   }
 }
 
@@ -138,157 +130,83 @@ export default async function DashboardPage() {
 
   const plan: Plan = profile?.plan ?? "free";
 
-  /* ---------------------------- INSTAGRAM ---------------------------------- */
-
-  const { data: metrics } = await supabase
-    .from("metrics")
-    .select("*")
-    .eq("user_id", user.id);
-
-  const instagram = metrics?.find((m) => m.platform === "instagram");
-
   /* --------------------------- YOUTUBE CHANNELS ---------------------------- */
 
-  const { data: initialChannels } = await supabase
+  const { data: channels } = await supabase
     .from("youtube_channels")
-    .select("*")
+    .select(
+      "id, channel_id, title, subscriber_count, view_count, video_count, last_synced_at"
+    )
     .eq("user_id", user.id);
 
-  let youtubeChannels: YouTubeChannel[] = initialChannels ?? [];
+  if (!channels || channels.length === 0) {
+    return <EmptyState />;
+  }
+
+  let youtubeChannels: YouTubeChannel[] = channels;
 
   /* -------------------------- SMART REFRESH -------------------------------- */
 
+  let didRefresh = false;
+
   for (const channel of youtubeChannels) {
-    await refreshChannelIfNeeded(supabase, channel);
+    const refreshed = await refreshChannelIfNeeded(
+      supabase,
+      channel,
+      now
+    );
+    if (refreshed) didRefresh = true;
   }
 
-  const { data: refreshed } = await supabase
-    .from("youtube_channels")
-    .select("*")
-    .eq("user_id", user.id);
+  if (didRefresh) {
+    const { data: updated } = await supabase
+      .from("youtube_channels")
+      .select(
+        "id, channel_id, title, subscriber_count, view_count, video_count, last_synced_at"
+      )
+      .eq("user_id", user.id);
 
-  youtubeChannels = refreshed ?? [];
+    youtubeChannels = updated ?? [];
+  }
 
   /* -------------------------- CHANNEL STATS -------------------------------- */
 
-  let channelStats: ChannelStat[] = [];
+  const { data: stats } = await supabase
+    .from("youtube_channel_stats")
+    .select("recorded_at, subscriber_count, view_count")
+    .eq("channel_id", youtubeChannels[0].id)
+    .order("recorded_at", { ascending: true })
+    .limit(14);
 
-  if (youtubeChannels.length > 0) {
-    const { data: stats } = await supabase
-      .from("youtube_channel_stats")
-      .select("*")
-      .eq("channel_id", youtubeChannels[0].id)
-      .order("recorded_at", { ascending: true })
-      .limit(14);
-
-    channelStats = stats ?? [];
-  }
-
-  const chartData = channelStats.map((stat) => ({
-    date: new Date(stat.recorded_at).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }),
-    subscribers: Number(stat.subscriber_count),
-    views: Number(stat.view_count),
-  }));
+  const chartData =
+    stats?.map((stat) => ({
+      date: new Date(stat.recorded_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      subscribers: Number(stat.subscriber_count),
+      views: Number(stat.view_count),
+    })) ?? [];
 
   /* --------------------------- PLAN LIMIT LOGIC ---------------------------- */
 
   const accountLimit = getAccountLimit(plan);
   const isLimitReached = youtubeChannels.length >= accountLimit;
 
-  /* -------------------------------------------------------------------------- */
-  /*                                EMPTY STATE                                */
-  /* -------------------------------------------------------------------------- */
-
-  if (youtubeChannels.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <h2 className="text-xl font-semibold mb-2">
-          No accounts connected yet
-        </h2>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">
-          Connect your YouTube account to start tracking real metrics.
-        </p>
-        <a
-          href="/dashboard/connect"
-          className="rounded-xl bg-black px-5 py-2.5 text-white hover:bg-gray-800 transition"
-        >
-          + Add Account
-        </a>
-      </div>
-    );
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /*                               MAIN DASHBOARD                              */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------ RENDER ----------------------------------- */
 
   return (
     <div className="space-y-8">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Manage your connected accounts
-          </p>
-        </div>
 
-        <div className="flex items-center gap-4">
-          <span
-            className={`rounded-full px-3 py-1 text-sm font-medium ${
-              plan === "agency"
-                ? "bg-purple-600 text-white"
-                : plan === "pro"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-200 text-gray-800 dark:bg-zinc-800 dark:text-gray-300"
-            }`}
-          >
-            {plan === "agency"
-              ? "Agency Plan"
-              : plan === "pro"
-              ? "Pro Plan"
-              : "Free Plan"}
-          </span>
+      <Header plan={plan} isLimitReached={isLimitReached} />
 
-          {!isLimitReached && (
-            <a
-              href="/dashboard/connect"
-              className="rounded-lg bg-black px-4 py-2 text-white hover:bg-gray-800 transition"
-            >
-              + Add Account
-            </a>
-          )}
-
-          <a
-            href="/pricing"
-            className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
-          >
-            Manage Plan
-          </a>
-        </div>
-      </div>
-
-      {/* METRICS GRID */}
       <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-        {instagram && (
-          <MetricCard
-            title="Instagram Followers"
-            value={instagram.followers?.toLocaleString() ?? "0"}
-            description={`+${instagram.growth ?? 0} this week`}
-          />
-        )}
-
         {youtubeChannels.map((channel) => (
           <MetricCard
             key={channel.id}
             title={channel.title}
-            value={Number(channel.subscriber_count).toLocaleString()}
-            description={`${Number(
-              channel.view_count
-            ).toLocaleString()} views • Updated ${timeAgo(
+            value={channel.subscriber_count.toLocaleString()}
+            description={`${channel.view_count.toLocaleString()} views • Updated ${timeAgo(
               channel.last_synced_at,
               now
             )}`}
@@ -296,15 +214,92 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* CHART */}
       {chartData.length > 0 && (
         <div className="mt-10">
           <h2 className="text-lg font-semibold mb-4">
             Subscriber Growth (Last 14 Days)
           </h2>
-          <YoutubeSubscribersChart data={chartData} />
+          <AccountMetricChart data={chartData} />
         </div>
       )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             AUX COMPONENTS                                 */
+/* -------------------------------------------------------------------------- */
+
+function Header({
+  plan,
+  isLimitReached,
+}: {
+  plan: Plan;
+  isLimitReached: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p className="text-sm text-gray-500">
+          Manage your connected accounts
+        </p>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <PlanBadge plan={plan} />
+
+        {!isLimitReached && (
+          <a
+            href="/dashboard/connect"
+            className="rounded-lg bg-black px-4 py-2 text-white hover:bg-gray-800 transition"
+          >
+            + Add Account
+          </a>
+        )}
+
+        <a
+          href="/pricing"
+          className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-100 transition"
+        >
+          Manage Plan
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function PlanBadge({ plan }: { plan: Plan }) {
+  const styles: Record<Plan, string> = {
+    agency: "bg-purple-600 text-white",
+    pro: "bg-indigo-600 text-white",
+    free: "bg-gray-200 text-gray-800",
+  };
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-sm font-medium ${styles[plan]}`}
+    >
+      {plan.charAt(0).toUpperCase() + plan.slice(1)} Plan
+    </span>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <h2 className="text-xl font-semibold mb-2">
+        No accounts connected yet
+      </h2>
+      <p className="text-gray-500 mb-6">
+        Connect your YouTube account to start tracking real metrics.
+      </p>
+      <a
+        href="/dashboard/connect"
+        className="rounded-xl bg-black px-5 py-2.5 text-white hover:bg-gray-800 transition"
+      >
+        + Add Account
+      </a>
     </div>
   );
 }

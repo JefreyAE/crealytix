@@ -13,50 +13,88 @@ import {
 
 type DataPoint = {
   date: string;
-  value: number;
+  subscribers: number;
+  views: number;
 };
 
 type Props = {
   data: DataPoint[];
-  metricLabel: string;
-  color?: string;
 };
 
-export default function AccountMetricChart({
-  data,
-  metricLabel,
-  color = "#6366f1",
-}: Props) {
-  const [range, setRange] = useState<7 | 14 | 30>(14);
+type MetricType = "subscribers" | "views";
+type RangeType = 7 | 14 | 30;
+
+export default function AccountMetricChart({ data }: Props) {
+  const [metric, setMetric] = useState<MetricType>("subscribers");
+  const [range, setRange] = useState<RangeType>(14);
+
+  /* ---------------- FILTER RANGE ---------------- */
 
   const filteredData = useMemo(() => {
+    if (!data?.length) return [];
     return data.slice(-range);
   }, [data, range]);
 
-  const latest = filteredData.at(-1)?.value ?? 0;
-  const first = filteredData[0]?.value ?? 0;
+  /* ---------------- KPI CALCULATIONS ---------------- */
 
-  const difference = latest - first;
-  const percent =
-    first !== 0 ? Number(((difference / first) * 100).toFixed(1)) : 0;
+  const kpis = useMemo(() => {
+    if (!filteredData.length) {
+      return {
+        latest: 0,
+        difference: 0,
+        percent: null as number | null,
+        isPositive: true,
+      };
+    }
 
-  const isPositive = difference >= 0;
+    const latest = filteredData.at(-1)?.[metric] ?? 0;
+    const first = filteredData[0]?.[metric] ?? 0;
+
+    const difference = latest - first;
+
+    if (first === 0) {
+      return {
+        latest,
+        difference,
+        percent: null,
+        isPositive: difference >= 0,
+      };
+    }
+
+    const percent = Number(((difference / first) * 100).toFixed(1));
+
+    return {
+      latest,
+      difference,
+      percent,
+      isPositive: difference >= 0,
+    };
+  }, [filteredData, metric]);
+
+  /* ---------------- FORMATTERS ---------------- */
 
   const formatCompact = (value: number) => {
     if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
     if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-    return value.toLocaleString();
+    return value.toLocaleString("en-US");
   };
+
+  const metricLabel =
+    metric === "subscribers" ? "Subscribers" : "Views";
+
+  /* ---------------- EMPTY STATE ---------------- */
 
   if (!filteredData.length) {
     return (
-      <div className="rounded-2xl border bg-white dark:bg-zinc-900 p-6">
+      <div className="rounded-2xl border bg-white dark:bg-zinc-900 p-6 shadow-sm">
         <p className="text-gray-500 text-sm">
-          No historical data available.
+          No historical data available yet.
         </p>
       </div>
     );
   }
+
+  /* ---------------- RENDER ---------------- */
 
   return (
     <div className="rounded-2xl border bg-white dark:bg-zinc-900 p-6 shadow-sm space-y-6">
@@ -68,39 +106,60 @@ export default function AccountMetricChart({
           <p className="text-sm text-gray-500">{metricLabel}</p>
 
           <h2 className="text-3xl font-bold">
-            {latest.toLocaleString()}
+            {kpis.latest.toLocaleString("en-US")}
           </h2>
 
           <div
             className={`flex items-center gap-2 text-sm font-medium ${
-              isPositive ? "text-green-600" : "text-red-600"
+              kpis.isPositive ? "text-green-600" : "text-red-600"
             }`}
           >
-            <span>
-              {isPositive ? "▲" : "▼"} {percent}%
-            </span>
+            {kpis.percent !== null && (
+              <span>
+                {kpis.isPositive ? "▲" : "▼"} {kpis.percent}%
+              </span>
+            )}
 
             <span className="text-gray-500">
-              ({difference.toLocaleString()} in last {range} days)
+              ({kpis.difference.toLocaleString("en-US")} in last {range} days)
             </span>
           </div>
         </div>
 
-        {/* RANGE SELECTOR */}
-        <div className="flex rounded-lg bg-gray-100 dark:bg-zinc-800 p-1">
-          {[7, 14, 30].map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r as 7 | 14 | 30)}
-              className={`px-3 py-1 text-sm rounded-md transition ${
-                range === r
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-600 dark:text-gray-400"
-              }`}
-            >
-              {r}d
-            </button>
-          ))}
+        {/* CONTROLS */}
+        <div className="flex flex-wrap gap-3">
+
+          <div className="flex rounded-lg bg-gray-100 dark:bg-zinc-800 p-1">
+            {(["subscribers", "views"] as MetricType[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMetric(m)}
+                className={`px-3 py-1 text-sm rounded-md transition ${
+                  metric === m
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {m === "subscribers" ? "Subscribers" : "Views"}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex rounded-lg bg-gray-100 dark:bg-zinc-800 p-1">
+            {[7, 14, 30].map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r as RangeType)}
+                className={`px-3 py-1 text-sm rounded-md transition ${
+                  range === r
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {r}d
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -109,31 +168,42 @@ export default function AccountMetricChart({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={filteredData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
+
+            <XAxis
+              dataKey="date"
+              interval="preserveStartEnd"
+            />
 
             <YAxis
               width={80}
-              tickFormatter={(v) =>
-                typeof v === "number" ? formatCompact(v) : ""
+              tickFormatter={(value) =>
+                typeof value === "number"
+                  ? formatCompact(value)
+                  : ""
               }
             />
 
             <Tooltip
               formatter={(value: number | string | undefined) => {
-                    if (typeof value === "number") {
-                      return value.toLocaleString();
-                    }
-                    return value ?? "";
-                  }}
+                if (typeof value === "number") {
+                  return value.toLocaleString();
+                }
+                return value ?? "";
+              }}
+              contentStyle={{
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+              }}
             />
 
             <Line
               type="monotone"
-              dataKey="value"
-              stroke={color}
+              dataKey={metric}
+              stroke="#6366f1"
               strokeWidth={3}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+              animationDuration={350}
             />
           </LineChart>
         </ResponsiveContainer>

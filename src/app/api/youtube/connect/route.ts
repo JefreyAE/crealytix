@@ -15,16 +15,21 @@ export async function POST(req: Request) {
 
   const { channelUrl } = await req.json();
 
+  if (!channelUrl) {
+    return NextResponse.json(
+      { error: "Channel URL is required" },
+      { status: 400 }
+    );
+  }
+
   try {
-    // 🔥 AQUÍ VA LO QUE PREGUNTASTE
     const realChannelId = await resolveChannelId(channelUrl);
-    const channel = await fetchYouTubeChannel(realChannelId);
 
     // 🔐 Evitar duplicados
     const { data: existing } = await supabase
-      .from("accounts")
+      .from("youtube_channels")
       .select("id")
-      .eq("external_id", realChannelId)
+      .eq("channel_id", realChannelId)
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -34,6 +39,37 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    // 📡 Obtener datos reales
+    const channel = await fetchYouTubeChannel(realChannelId);
+
+    // 📝 Insertar canal
+    const { data: insertedChannel, error: insertError } = await supabase
+      .from("youtube_channels")
+      .insert({
+        user_id: user.id,
+        channel_id: realChannelId,
+        title: channel.title,
+        subscriber_count: channel.subscriberCount,
+        view_count: channel.viewCount,
+        video_count: channel.videoCount,
+        last_synced_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (insertError || !insertedChannel) {
+      throw insertError;
+    }
+
+    // 📊 Snapshot histórico inicial
+    await supabase.from("youtube_channel_stats").insert({
+      channel_id: insertedChannel.id,
+      subscriber_count: channel.subscriberCount,
+      view_count: channel.viewCount,
+      video_count: channel.videoCount,
+    });
+
     return NextResponse.json({ success: true });
 
   } catch (error) {

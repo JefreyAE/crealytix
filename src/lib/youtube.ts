@@ -1,6 +1,6 @@
 export async function fetchYouTubeChannel(channelId: string) {
   const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${process.env.YOUTUBE_API_KEY}`,
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${process.env.YOUTUBE_API_KEY}`,
     { cache: "no-store" }
   );
 
@@ -10,8 +10,17 @@ export async function fetchYouTubeChannel(channelId: string) {
     throw new Error("Channel not found");
   }
 
-  return data.items[0].statistics;
+  const item = data.items[0];
+
+  return {
+    title: item.snippet.title,
+    subscriberCount: Number(item.statistics.subscriberCount),
+    viewCount: Number(item.statistics.viewCount),
+    videoCount: Number(item.statistics.videoCount),
+  };
 }
+
+
 
 export async function resolveChannelId(input: string) {
   const API_KEY = process.env.YOUTUBE_API_KEY;
