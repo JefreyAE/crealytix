@@ -1,6 +1,25 @@
-export async function fetchYouTubeChannel(channelId: string) {
+
+type YouTubeChannelResponse = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  subscriberCount: number;
+  viewCount: number;
+  videoCount: number;
+};
+
+export async function fetchYouTubeChannel(
+  channelId: string
+): Promise<YouTubeChannelResponse> {
+  const API_KEY = process.env.YOUTUBE_API_KEY;
+
+  if (!API_KEY) {
+    throw new Error("YouTube API key not configured");
+  }
+
   const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${process.env.YOUTUBE_API_KEY}`,
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${API_KEY}`,
     { cache: "no-store" }
   );
 
@@ -10,46 +29,81 @@ export async function fetchYouTubeChannel(channelId: string) {
     throw new Error("Channel not found");
   }
 
-  const item = data.items[0];
+  const channel = data.items[0];
 
   return {
-    title: item.snippet.title,
-    subscriberCount: Number(item.statistics.subscriberCount),
-    viewCount: Number(item.statistics.viewCount),
-    videoCount: Number(item.statistics.videoCount),
+    id: channel.id,
+    title: channel.snippet.title,
+    description: channel.snippet.description,
+    thumbnail: channel.snippet.thumbnails?.high?.url ?? "",
+    subscriberCount: Number(channel.statistics.subscriberCount ?? 0),
+    viewCount: Number(channel.statistics.viewCount ?? 0),
+    videoCount: Number(channel.statistics.videoCount ?? 0),
   };
 }
-
-
 
 export async function resolveChannelId(input: string) {
   const API_KEY = process.env.YOUTUBE_API_KEY;
 
-  // Caso 1: Ya es channel ID
-  if (input.startsWith("UC")) {
-    return input;
+  if (!API_KEY) {
+    throw new Error("YouTube API key not configured");
   }
 
-  // Extraer handle de URL
-  let handle = input;
+  const value = input.trim();
 
-  if (input.includes("@")) {
-    const match = input.match(/@([^\/]+)/);
-    if (match) {
-      handle = match[1];
+  // 1️⃣ Si ya es channel ID
+  if (value.startsWith("UC")) {
+    return value;
+  }
+
+  // 2️⃣ Extraer ID directo de /channel/
+  const channelMatch = value.match(/channel\/(UC[\w-]+)/);
+  if (channelMatch) {
+    return channelMatch[1];
+  }
+
+  // 3️⃣ Extraer handle tipo @usuario
+  const handleMatch = value.match(/@([\w.-]+)/);
+  if (handleMatch) {
+    const handle = handleMatch[1];
+
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${handle}&key=${API_KEY}`
+    );
+
+    const data = await res.json();
+
+    if (data.items?.length) {
+      return data.items[0].id;
     }
   }
 
-  // Buscar canal por handle
+  // 4️⃣ Extraer custom URL /c/ o /user/
+  const customMatch = value.match(/(?:c|user)\/([\w-]+)/);
+  if (customMatch) {
+    const customName = customMatch[1];
+
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${customName}&key=${API_KEY}`
+    );
+
+    const data = await res.json();
+
+    if (data.items?.length) {
+      return data.items[0].snippet.channelId;
+    }
+  }
+
+  // 5️⃣ Fallback: intentar búsqueda directa
   const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${handle}&key=${API_KEY}`
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${value}&key=${API_KEY}`
   );
 
   const data = await res.json();
 
-  if (!data.items || data.items.length === 0) {
-    throw new Error("Channel not found");
+  if (data.items?.length) {
+    return data.items[0].snippet.channelId;
   }
 
-  return data.items[0].snippet.channelId;
+  throw new Error("Channel not found");
 }
