@@ -1,7 +1,9 @@
 import { formatNumber, formatTimeAgo } from "@/lib/utils/format";
+import DeleteChannelButton from "./DeleteChannelButton";
 
 type Props = {
     channel: {
+        id: string;
         title: string;
         subscriber_count: number;
         view_count: number;
@@ -48,6 +50,7 @@ export default function ChannelHero({ channel, now }: Props) {
                     >
                         Open in YouTube
                     </a>
+                    <DeleteChannelButton channelId={channel.id} />
                 </div>
             </div>
         </section>

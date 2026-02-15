@@ -117,3 +117,31 @@ export async function insertDailyStat(payload: any) {
 
   if (error) throw error;
 }
+
+
+/* ------------------------------------------ */
+/* DELETE CHANNEL */
+/* ------------------------------------------ */
+export async function deleteYouTubeChannel(
+  userId: string,
+  channelId: string
+) {
+  const supabase = await createSupabaseServerClient();
+
+  // 🔥 Borra primero los stats (si no tienes ON DELETE CASCADE)
+  const { error: statsError } = await supabase
+    .from("youtube_channel_stats")
+    .delete()
+    .eq("channel_id", channelId);
+
+  if (statsError) throw statsError;
+
+  // 🔥 Borra el canal validando user_id
+  const { error: channelError } = await supabase
+    .from("youtube_channels")
+    .delete()
+    .eq("id", channelId)
+    .eq("user_id", userId);
+
+  if (channelError) throw channelError;
+}

@@ -42,9 +42,8 @@ export default function DashboardSidebar({
 
   return (
     <aside
-      className={`${
-        collapsed ? "w-20" : "w-64"
-      } transition-all duration-300 bg-white dark:bg-[#111827] border-r dark:border-gray-800 flex flex-col justify-between`}
+      className={`${collapsed ? "w-20" : "w-64"
+        } transition-all duration-300 bg-white dark:bg-[#111827] border-r dark:border-gray-800 flex flex-col justify-between`}
     >
       <div className="p-6">
         {/* USER */}
@@ -116,19 +115,18 @@ export default function DashboardSidebar({
         <nav className="space-y-2">
           {navItems.map((item) => {
             const isActive =
-              item.href === "/pricing"
-                ? pathname === item.href
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
                 : pathname.startsWith(item.href);
 
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  isActive
+                className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${isActive
                     ? "bg-indigo-600 text-white"
                     : "hover:bg-gray-100 dark:hover:bg-zinc-800"
-                }`}
+                  }`}
               >
                 {!collapsed && item.name}
               </Link>

@@ -4,6 +4,7 @@ import {
   insertYouTubeChannel,
   insertDailyStat,
   updateYouTubeChannel,
+  deleteYouTubeChannel,
 } from "@/lib/repositories/youtube.repository";
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -84,4 +85,11 @@ export async function refreshChannelIfNeeded(channel: any) {
   });
 
   return true;
+}
+
+export async function removeYouTubeChannel(
+  userId: string,
+  channelId: string
+) {
+  await deleteYouTubeChannel(userId, channelId);
 }
