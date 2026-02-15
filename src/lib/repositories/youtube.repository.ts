@@ -91,13 +91,18 @@ export async function updateYouTubeChannel(
 ) {
   const supabase = await createSupabaseServerClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("youtube_channels")
     .update(payload)
-    .eq("id", channelId);
+    .eq("id", channelId)
+    .select()
+    .single();
 
   if (error) throw error;
+
+  return data;
 }
+
 
 /* ------------------------------------------ */
 /* INSERT DAILY STAT */

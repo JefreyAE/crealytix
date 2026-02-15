@@ -44,18 +44,15 @@ export default async function DashboardLayout({
         accountCount={channels.length}
         accountLimit={planConfig.maxAccounts}
       />
-
       <div className="flex-1 flex flex-col">
         <header className="h-16 bg-white dark:bg-[#111827] border-b dark:border-gray-800 flex items-center px-8 shadow-sm">
           <h1 className="text-lg font-semibold">
             Dashboard
           </h1>
         </header>
-
         <main className="p-8">
           {children}
         </main>
-
       </div>
     </div>
   );

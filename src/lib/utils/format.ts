@@ -63,3 +63,8 @@ export function formatTimeAgo(
 
   return `${days} days ago`;
 }
+
+export function timeNow(){
+  const now = Date.now();
+  return now
+}
