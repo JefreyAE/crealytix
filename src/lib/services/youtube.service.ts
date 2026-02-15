@@ -1,10 +1,62 @@
-import { fetchYouTubeChannel } from "@/lib/youtube";
+import { resolveChannelId, fetchYouTubeChannel } from "@/lib/youtube";
 import {
-  updateYouTubeChannel,
+  findChannelByExternalId,
+  insertYouTubeChannel,
   insertDailyStat,
+  updateYouTubeChannel,
 } from "@/lib/repositories/youtube.repository";
 
 const TEN_MINUTES = 10 * 60 * 1000;
+
+/* ------------------------------------------------ */
+/* CONNECT YOUTUBE CHANNEL */
+/* ------------------------------------------------ */
+
+export async function connectYouTubeChannel(
+  userId: string,
+  channelUrl: string
+) {
+  // 🔹 Resolver ID real
+  const realChannelId = await resolveChannelId(channelUrl);
+
+  // 🔹 Verificar duplicado
+  const existing = await findChannelByExternalId(
+    userId,
+    realChannelId
+  );
+
+  if (existing) {
+    throw new Error("Channel already connected");
+  }
+
+  // 🔹 Obtener datos reales del canal
+  const channelData = await fetchYouTubeChannel(realChannelId);
+
+  // 🔹 Insertar canal
+  const insertedChannel = await insertYouTubeChannel({
+    user_id: userId,
+    channel_id: realChannelId,
+    title: channelData.title,
+    subscriber_count: channelData.subscriberCount,
+    view_count: channelData.viewCount,
+    video_count: channelData.videoCount,
+    last_synced_at: new Date().toISOString(),
+  });
+
+  // 🔹 Insertar snapshot inicial
+  await insertDailyStat({
+    channel_id: insertedChannel.id,
+    subscriber_count: channelData.subscriberCount,
+    view_count: channelData.viewCount,
+    video_count: channelData.videoCount,
+  });
+
+  return insertedChannel;
+}
+
+/* ------------------------------------------------ */
+/* SMART REFRESH */
+/* ------------------------------------------------ */
 
 export async function refreshChannelIfNeeded(channel: any) {
   const now = Date.now();
@@ -13,25 +65,23 @@ export async function refreshChannelIfNeeded(channel: any) {
     ? new Date(channel.last_synced_at).getTime()
     : 0;
 
-  if (now - lastSynced <= TEN_MINUTES) {
-    return null;
-  }
+  if (now - lastSynced <= TEN_MINUTES) return false;
 
   const stats = await fetchYouTubeChannel(channel.channel_id);
 
-  const updatedChannel = await updateYouTubeChannel(channel.id, {
-    subscriber_count: Number(stats.subscriberCount),
-    view_count: Number(stats.viewCount),
-    video_count: Number(stats.videoCount),
+  await updateYouTubeChannel(channel.id, {
+    subscriber_count: stats.subscriberCount,
+    view_count: stats.viewCount,
+    video_count: stats.videoCount,
     last_synced_at: new Date().toISOString(),
   });
 
   await insertDailyStat({
     channel_id: channel.id,
-    subscriber_count: Number(stats.subscriberCount),
-    view_count: Number(stats.viewCount),
-    video_count: Number(stats.videoCount),
+    subscriber_count: stats.subscriberCount,
+    view_count: stats.viewCount,
+    video_count: stats.videoCount,
   });
 
-  return updatedChannel;
+  return true;
 }

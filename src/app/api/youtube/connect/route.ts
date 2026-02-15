@@ -31,11 +31,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error(error);
-
     return NextResponse.json(
       { error: error.message || "Failed to connect channel" },
       { status: 400 }
     );
   }
 }
+

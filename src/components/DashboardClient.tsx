@@ -29,9 +29,10 @@ export default function DashboardClient({
 
             {/* CARDS */}
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-                {channels.map((channel) => (
+                {channels.map((channel) => {
+                    const platform = "youtube"
+                    return(
                     <div key={channel.id} className="space-y-3">
-
                         {/* Card clickable SOLO para seleccionar */}
                         <div
                             onClick={() => setSelectedChannelId(channel.id)}
@@ -45,10 +46,11 @@ export default function DashboardClient({
                                 selected={selectedChannelId === channel.id}
                                 onSelect={() => setSelectedChannelId(channel.id)}
                                 href={`/dashboard/youtube/${channel.id}`}
+                                platform={platform}
                             />
                         </div>
                     </div>
-                ))}
+                )})}
             </div>
 
             {/* CHART */}
