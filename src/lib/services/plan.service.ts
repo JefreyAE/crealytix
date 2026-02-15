@@ -1,5 +1,18 @@
 export type Plan = "free" | "pro" | "agency";
 
+export const PLAN_ORDER: Record<Plan, number> = {
+  free: 0,
+  pro: 1,
+  agency: 2,
+};
+
+export function isDowngrade(
+  current: Plan,
+  next: Plan
+) {
+  return PLAN_ORDER[next] < PLAN_ORDER[current];
+}
+
 type PlanConfig = {
   maxAccounts: number;
   features: {
