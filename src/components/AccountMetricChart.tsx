@@ -17,6 +17,11 @@ type DataPoint = {
   views: number;
 };
 
+type TransformedDataPoint = DataPoint & {
+  percent?: number;
+};
+
+
 type Props = {
   data: DataPoint[];
 };
@@ -40,7 +45,7 @@ export default function AccountMetricChart({ data }: Props) {
   }, [data, range]);
 
   /* ---------------- TRANSFORM DATA (PERCENT MODE) ---------------- */
-  const transformedData = useMemo(() => {
+  const transformedData = useMemo<TransformedDataPoint[]>(() => {
     if (!filteredData.length) return [];
 
     if (viewMode === "absolute") return filteredData;
@@ -69,7 +74,8 @@ export default function AccountMetricChart({ data }: Props) {
     const values =
       viewMode === "absolute"
         ? transformedData.map((d) => d[metric])
-        : transformedData.map((d) => d.percent);
+        : transformedData.map((d) => d.percent ?? 0);
+
 
     const min = Math.min(...values);
     const max = Math.max(...values);
@@ -83,11 +89,6 @@ export default function AccountMetricChart({ data }: Props) {
       Math.ceil(max + padding),
     ];
   }, [transformedData, metric, viewMode]);
-
-
-
-
-
 
   /* ---------------- KPI CALCULATIONS ---------------- */
 

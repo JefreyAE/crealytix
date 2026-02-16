@@ -50,6 +50,7 @@ export default function DeleteChannelButton({ channelId, channelTitle }: Props) 
         onConfirm={() =>{  
           if (pendingDelete) {
             handleDelete()
+            setLoading(true)
           }
         }}
       />
