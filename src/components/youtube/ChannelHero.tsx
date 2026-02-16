@@ -50,7 +50,7 @@ export default function ChannelHero({ channel, now }: Props) {
                     >
                         Open in YouTube
                     </a>
-                    <DeleteChannelButton channelId={channel.id} />
+                    <DeleteChannelButton channelId={channel.id} channelTitle={channel.title} />
                 </div>
             </div>
         </section>

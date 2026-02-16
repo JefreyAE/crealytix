@@ -23,8 +23,12 @@ type Props = {
 
 type MetricType = "subscribers" | "views";
 type RangeType = 7 | 14 | 30;
+type ViewMode = "absolute" | "percent";
 
 export default function AccountMetricChart({ data }: Props) {
+
+
+  const [viewMode, setViewMode] = useState<ViewMode>("absolute");
   const [metric, setMetric] = useState<MetricType>("subscribers");
   const [range, setRange] = useState<RangeType>(14);
 
@@ -34,6 +38,56 @@ export default function AccountMetricChart({ data }: Props) {
     if (!data?.length) return [];
     return data.slice(-range);
   }, [data, range]);
+
+  /* ---------------- TRANSFORM DATA (PERCENT MODE) ---------------- */
+  const transformedData = useMemo(() => {
+    if (!filteredData.length) return [];
+
+    if (viewMode === "absolute") return filteredData;
+
+    const firstValue = filteredData[0]?.[metric] ?? 0;
+
+    if (firstValue === 0) return filteredData;
+
+    return filteredData.map((point) => {
+      const currentValue = point[metric];
+      const percentChange =
+        ((currentValue - firstValue) / firstValue) * 100;
+
+      return {
+        ...point,
+        percent: Number(percentChange.toFixed(2)),
+      };
+    });
+  }, [filteredData, metric, viewMode]);
+
+  /* ---------------- Y AXIS DOMAIN ---------------- */
+
+  const yDomain = useMemo(() => {
+    if (!transformedData.length) return [0, 0];
+
+    const values =
+      viewMode === "absolute"
+        ? transformedData.map((d) => d[metric])
+        : transformedData.map((d) => d.percent);
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    if (min === max) return [min - 1, max + 1];
+
+    const padding = (max - min) * 0.15;
+
+    return [
+      Math.floor(min - padding),
+      Math.ceil(max + padding),
+    ];
+  }, [transformedData, metric, viewMode]);
+
+
+
+
+
 
   /* ---------------- KPI CALCULATIONS ---------------- */
 
@@ -110,9 +164,8 @@ export default function AccountMetricChart({ data }: Props) {
           </h2>
 
           <div
-            className={`flex items-center gap-2 text-sm font-medium ${
-              kpis.isPositive ? "text-green-600" : "text-red-600"
-            }`}
+            className={`flex items-center gap-2 text-sm font-medium ${kpis.isPositive ? "text-green-600" : "text-red-600"
+              }`}
           >
             {kpis.percent !== null && (
               <span>
@@ -134,11 +187,10 @@ export default function AccountMetricChart({ data }: Props) {
               <button
                 key={m}
                 onClick={() => setMetric(m)}
-                className={`px-3 py-1 text-sm rounded-md transition ${
-                  metric === m
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
+                className={`px-3 py-1 text-sm rounded-md transition ${metric === m
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-600 dark:text-gray-400"
+                  }`}
               >
                 {m === "subscribers" ? "Subscribers" : "Views"}
               </button>
@@ -150,23 +202,37 @@ export default function AccountMetricChart({ data }: Props) {
               <button
                 key={r}
                 onClick={() => setRange(r as RangeType)}
-                className={`px-3 py-1 text-sm rounded-md transition ${
-                  range === r
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
+                className={`px-3 py-1 text-sm rounded-md transition ${range === r
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-600 dark:text-gray-400"
+                  }`}
               >
                 {r}d
               </button>
             ))}
           </div>
+          <div className="flex rounded-lg bg-gray-100 dark:bg-zinc-800 p-1">
+            {(["absolute", "percent"] as ViewMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`px-3 py-1 text-sm rounded-md transition ${viewMode === mode
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-600 dark:text-gray-400"
+                  }`}
+              >
+                {mode === "absolute" ? "Absolute" : "% Growth"}
+              </button>
+            ))}
+          </div>
+
         </div>
       </div>
 
       {/* CHART */}
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={filteredData}>
+          <LineChart data={transformedData}>
             <CartesianGrid strokeDasharray="3 3" />
 
             <XAxis
@@ -176,9 +242,12 @@ export default function AccountMetricChart({ data }: Props) {
 
             <YAxis
               width={80}
+              domain={yDomain}
               tickFormatter={(value) =>
                 typeof value === "number"
-                  ? formatCompact(value)
+                  ? viewMode === "percent"
+                    ? `${value.toFixed(0)}%`
+                    : formatCompact(value)
                   : ""
               }
             />
@@ -198,13 +267,14 @@ export default function AccountMetricChart({ data }: Props) {
 
             <Line
               type="monotone"
-              dataKey={metric}
+              dataKey={viewMode === "absolute" ? metric : "percent"}
               stroke="#6366f1"
               strokeWidth={3}
-              dot={{ r: 3 }}
+              dot={false}
               activeDot={{ r: 5 }}
               animationDuration={350}
             />
+
           </LineChart>
         </ResponsiveContainer>
       </div>
