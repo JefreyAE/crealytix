@@ -67,7 +67,7 @@ export async function refreshChannelIfNeeded(channel: any) {
     ? new Date(channel.last_synced_at).getTime()
     : 0;
 
-  if (now - lastSynced <= TEN_MINUTES) return false;
+  //if (now - lastSynced <= TEN_MINUTES) return false;
 
   const stats = await fetchYouTubeChannel(channel.channel_id);
 
@@ -93,4 +93,22 @@ export async function removeYouTubeChannel(
   channelId: string
 ) {
   await deleteYouTubeChannel(userId, channelId);
+}
+
+export async function forceRefreshChannel(channel: any) {
+  const stats = await fetchYouTubeChannel(channel.channel_id);
+
+  await updateYouTubeChannel(channel.id, {
+    subscriber_count: stats.subscriberCount,
+    view_count: stats.viewCount,
+    video_count: stats.videoCount,
+    last_synced_at: new Date().toISOString(),
+  });
+
+  await insertDailyStat({
+    channel_id: channel.id,
+    subscriber_count: stats.subscriberCount,
+    view_count: stats.viewCount,
+    video_count: stats.videoCount,
+  });
 }
