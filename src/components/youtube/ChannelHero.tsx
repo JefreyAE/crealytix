@@ -1,5 +1,6 @@
 import { formatNumber, formatTimeAgo } from "@/lib/utils/format";
 import DeleteChannelButton from "./DeleteChannelButton";
+import Image from "next/image";
 
 type Props = {
     channel: {
@@ -9,6 +10,7 @@ type Props = {
         view_count: number;
         channel_id: string;
         last_synced_at: string | null;
+        thumbnail_url: string;
     };
     now: number;
 };
@@ -20,7 +22,20 @@ export default function ChannelHero({ channel, now }: Props) {
 
                 <div className="flex items-center gap-6">
                     <div className="w-20 h-20 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-2xl font-bold">
-                        {channel.title.charAt(0)}
+                        {channel.thumbnail_url ? (
+                            <div className="relative w-20 h-20">
+                                <Image
+                                    src={channel.thumbnail_url}
+                                    alt={channel.title}
+                                    fill
+                                    className="rounded-xl object-cover border border-gray-700"
+                                />
+                            </div>
+                        ) : (
+                            <div className="w-16 h-16 rounded-xl bg-gray-700 flex items-center justify-center text-white text-xl font-bold border border-gray-700">
+                                {channel.title.charAt(0)}
+                            </div>
+                        )}
                     </div>
 
                     <div>

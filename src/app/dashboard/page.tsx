@@ -41,7 +41,6 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <Header plan={plan} isLimitReached={isLimitReached} />
-
       <DashboardClient
         channels={channels}
         statsByChannel={statsByChannel}

@@ -41,6 +41,7 @@ export async function connectYouTubeChannel(
     subscriber_count: channelData.subscriberCount,
     view_count: channelData.viewCount,
     video_count: channelData.videoCount,
+    thumbnail_url: channelData.thumbnail, // 🔥 A
     last_synced_at: new Date().toISOString(),
   });
 

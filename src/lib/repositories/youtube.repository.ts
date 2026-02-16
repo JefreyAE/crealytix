@@ -10,7 +10,7 @@ export async function getUserYouTubeChannels(userId: string) {
   const { data, error } = await supabase
     .from("youtube_channels")
     .select(
-      "id, channel_id, title, subscriber_count, view_count, video_count, last_synced_at"
+      "id, channel_id, title, subscriber_count, view_count, video_count, last_synced_at, thumbnail_url",
     )
     .eq("user_id", userId);
 

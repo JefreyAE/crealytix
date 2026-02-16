@@ -41,6 +41,7 @@ export default function DashboardClient({
                             <MetricCard
                                 key={channel.id}
                                 title={channel.title}
+                                thumbnail_url={channel.thumbnail_url}
                                 value={formatNumber(channel.subscriber_count)}
                                 description={`${formatNumber(channel.view_count)} views`}
                                 selected={selectedChannelId === channel.id}
