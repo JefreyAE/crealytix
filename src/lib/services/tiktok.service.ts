@@ -54,7 +54,7 @@ async function fetchTikTokUserInfo(accessToken: string) {
     throw new Error("Failed to fetch user info");
   }
 
-  return data.data;
+  return data.data.user;
 }
 
 /* ------------------------------------------ */
