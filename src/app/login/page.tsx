@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import GoogleLoginButton from "@/components/Login/GoogleLoginButton"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -118,20 +119,7 @@ export default function LoginPage() {
           >
             {loading ? "Signing in..." : "Login"}
           </button>
-          <button
-            type="button"
-            onClick={async () => {
-              await supabase.auth.signInWithOAuth({
-                provider: "google",
-                options: {
-                  redirectTo: `${window.location.origin}/auth/callback`,
-                },
-              });
-            }}
-            className="w-full rounded-xl border border-gray-300 dark:border-gray-700 py-2.5 font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
-          >
-            Continue with Google
-          </button>
+          <GoogleLoginButton/>
         </form>
         {/* Register link */}
         <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
