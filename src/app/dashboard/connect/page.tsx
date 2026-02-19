@@ -65,6 +65,14 @@ export default function ConnectPage() {
         {loading ? "Connecting..." : "Connect YouTube"}
       </button>
 
+      <a
+        href="/api/tiktok/auth"
+        className="px-4 py-2 bg-black text-white rounded-lg"
+      >
+        Connect TikTok
+      </a>
+
+
       {message && (
         <div className="text-sm text-gray-600 dark:text-gray-400">
           {message}
