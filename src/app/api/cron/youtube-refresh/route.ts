@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { refreshChannelIfNeeded } from "@/lib/services/youtube.service";
+import { refreshTikTokAccountData } from "@/lib/services/tiktok.service";
+
+const supabase = await createSupabaseServerClient();
 
 export async function GET(req: Request) {
   const isLocal = process.env.NODE_ENV === "development";
@@ -16,8 +19,6 @@ export async function GET(req: Request) {
     }
   }
 
-  const supabase = await createSupabaseServerClient();
-
   // 🔎 Traer todos los canales
   const { data: channels } = await supabase
     .from("youtube_channels")
@@ -32,4 +33,16 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({ success: true });
+}
+
+const { data: tiktokAccounts } = await supabase
+  .from("tiktok_accounts")
+  .select("*");
+
+for (const account of tiktokAccounts ?? []) {
+  try {
+    await refreshTikTokAccountData(account);
+  } catch (err) {
+    console.error("TikTok refresh failed:", err);
+  }
 }

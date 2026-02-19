@@ -4,9 +4,11 @@ import {
 } from "@/lib/repositories/youtube.repository";
 import { refreshChannelIfNeeded } from "./youtube.service";
 import { formatChartDate } from "@/lib/utils/format";
+import { getUserTikTokAccounts } from "../repositories/tiktok.repository";
 
 export async function getDashboardData(userId: string) {
   const channels = await getUserYouTubeChannels(userId);
+  const tiktokAccounts = await getUserTikTokAccounts(userId);
 
   for (const channel of channels) {
     await refreshChannelIfNeeded(channel);

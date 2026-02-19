@@ -39,3 +39,14 @@ export async function insertTikTokDailyStat(payload: any) {
 
   if (error) throw error;
 }
+
+export async function getUserTikTokAccounts(userId: string) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data } = await supabase
+    .from("tiktok_accounts")
+    .select("*")
+    .eq("user_id", userId);
+
+  return data ?? [];
+}
