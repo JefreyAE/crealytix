@@ -27,9 +27,12 @@ export async function GET(req: Request) {
     await connectTikTokOAuthAccount(user.id, code);
 
     return NextResponse.redirect(new URL("/dashboard", req.url));
-  } catch (error) {
-    return NextResponse.redirect(
-      new URL("/dashboard?error=tiktok", req.url)
+  } catch (error: any) {
+    console.error("TikTok OAuth Error:", error);
+    return NextResponse.json(
+      { error: error.message || "TikTok failed" },
+      { status: 500 }
     );
   }
+
 }
