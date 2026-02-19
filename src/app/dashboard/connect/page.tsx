@@ -69,7 +69,7 @@ export default function ConnectPage() {
         href="/api/tiktok/auth"
         className="px-4 py-2 bg-black text-white rounded-lg"
       >
-        Connect TikTok
+        Connect TikTokz
       </a>
 
 
