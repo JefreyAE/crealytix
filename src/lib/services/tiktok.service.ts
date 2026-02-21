@@ -57,11 +57,11 @@ async function fetchTikTokUserInfo(accessToken: string) {
 
   const data = await res.json();
 
-  // TikTok API v2 can return errors in different formats:
-  // - { error: { code: "...", message: "..." } }
-  // - { error: "string_error", error_description: "..." }
+  // TikTok API v2 ALWAYS returns an error object, even on success:
+  // Success: { error: { code: "ok", message: "" } }
+  // Failure: { error: { code: "access_token_invalid", message: "..." } }
   const apiError = data.error;
-  const hasError = !res.ok || (apiError && (typeof apiError === "string" || apiError.code));
+  const hasError = !res.ok || (apiError && apiError.code && apiError.code !== "ok");
 
   if (hasError) {
     console.error("TikTok user info error (status", res.status, "):", JSON.stringify(data, null, 2));
