@@ -9,6 +9,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Area,
+  AreaChart,
 } from "recharts";
 
 type DataPoint = {
@@ -21,7 +23,6 @@ type TransformedDataPoint = DataPoint & {
   percent?: number;
 };
 
-
 type Props = {
   data: DataPoint[];
 };
@@ -31,102 +32,46 @@ type RangeType = 7 | 14 | 30;
 type ViewMode = "absolute" | "percent";
 
 export default function AccountMetricChart({ data }: Props) {
-
-
   const [viewMode, setViewMode] = useState<ViewMode>("absolute");
   const [metric, setMetric] = useState<MetricType>("subscribers");
   const [range, setRange] = useState<RangeType>(14);
-
-  /* ---------------- FILTER RANGE ---------------- */
 
   const filteredData = useMemo(() => {
     if (!data?.length) return [];
     return data.slice(-range);
   }, [data, range]);
 
-  /* ---------------- TRANSFORM DATA (PERCENT MODE) ---------------- */
   const transformedData = useMemo<TransformedDataPoint[]>(() => {
     if (!filteredData.length) return [];
-
     if (viewMode === "absolute") return filteredData;
-
     const firstValue = filteredData[0]?.[metric] ?? 0;
-
     if (firstValue === 0) return filteredData;
-
-    return filteredData.map((point) => {
-      const currentValue = point[metric];
-      const percentChange =
-        ((currentValue - firstValue) / firstValue) * 100;
-
-      return {
-        ...point,
-        percent: Number(percentChange.toFixed(2)),
-      };
-    });
+    return filteredData.map((point) => ({
+      ...point,
+      percent: Number((((point[metric] - firstValue) / firstValue) * 100).toFixed(2)),
+    }));
   }, [filteredData, metric, viewMode]);
-
-  /* ---------------- Y AXIS DOMAIN ---------------- */
 
   const yDomain = useMemo(() => {
     if (!transformedData.length) return [0, 0];
-
-    const values =
-      viewMode === "absolute"
-        ? transformedData.map((d) => d[metric])
-        : transformedData.map((d) => d.percent ?? 0);
-
-
+    const values = viewMode === "absolute"
+      ? transformedData.map((d) => d[metric])
+      : transformedData.map((d) => d.percent ?? 0);
     const min = Math.min(...values);
     const max = Math.max(...values);
-
     if (min === max) return [min - 1, max + 1];
-
-    const padding = (max - min) * 0.15;
-
-    return [
-      Math.floor(min - padding),
-      Math.ceil(max + padding),
-    ];
+    const padding = (max - min) * 0.2;
+    return [Math.floor(min - padding), Math.ceil(max + padding)];
   }, [transformedData, metric, viewMode]);
 
-  /* ---------------- KPI CALCULATIONS ---------------- */
-
   const kpis = useMemo(() => {
-    if (!filteredData.length) {
-      return {
-        latest: 0,
-        difference: 0,
-        percent: null as number | null,
-        isPositive: true,
-      };
-    }
-
+    if (!filteredData.length) return { latest: 0, difference: 0, percent: null as number | null, isPositive: true };
     const latest = filteredData.at(-1)?.[metric] ?? 0;
     const first = filteredData[0]?.[metric] ?? 0;
-
     const difference = latest - first;
-
-    if (first === 0) {
-      return {
-        latest,
-        difference,
-        percent: null,
-        isPositive: difference >= 0,
-      };
-    }
-
-    const percent = Number(((difference / first) * 100).toFixed(1));
-
-    return {
-      latest,
-      difference,
-      percent,
-      isPositive: difference >= 0,
-    };
+    const percent = first === 0 ? null : Number(((difference / first) * 100).toFixed(1));
+    return { latest, difference, percent, isPositive: difference >= 0 };
   }, [filteredData, metric]);
-
-  /* ---------------- FORMATTERS ---------------- */
 
   const formatCompact = (value: number) => {
     if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -134,149 +79,142 @@ export default function AccountMetricChart({ data }: Props) {
     return value.toLocaleString("en-US");
   };
 
-  const metricLabel =
-    metric === "subscribers" ? "Subscribers" : "Views";
-
-  /* ---------------- EMPTY STATE ---------------- */
+  const metricLabel = metric === "subscribers" ? "Subscribers" : "Views";
 
   if (!filteredData.length) {
     return (
-      <div className="rounded-2xl border bg-white dark:bg-zinc-900 p-6 shadow-sm">
-        <p className="text-gray-500 text-sm">
-          No historical data available yet.
-        </p>
+      <div className="glass p-12 text-center rounded-[2.5rem] border-2 border-slate-200/50 dark:border-slate-800/50">
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Analytics Data</p>
+        <p className="text-slate-400 mt-2">No historical data available for this range.</p>
       </div>
     );
   }
 
-  /* ---------------- RENDER ---------------- */
-
   return (
-    <div className="rounded-2xl border bg-white dark:bg-zinc-900 p-6 shadow-sm space-y-6">
+    <div className="glass p-6 md:p-8 rounded-[2rem] border-2 border-slate-200/50 dark:border-slate-800/50 space-y-8 animate-fadeUp shadow-2xl shadow-indigo-500/5">
 
-      {/* KPI HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-
-        <div>
-          <p className="text-sm text-gray-500">{metricLabel}</p>
-
-          <h2 className="text-3xl font-bold">
-            {kpis.latest.toLocaleString("en-US")}
-          </h2>
-
-          <div
-            className={`flex items-center gap-2 text-sm font-medium ${kpis.isPositive ? "text-green-600" : "text-red-600"
-              }`}
-          >
-            {kpis.percent !== null && (
-              <span>
-                {kpis.isPositive ? "▲" : "▼"} {kpis.percent}%
-              </span>
-            )}
-
-            <span className="text-gray-500">
-              ({kpis.difference.toLocaleString("en-US")} in last {range} days)
-            </span>
+      {/* COMPACT HEADER & CONTROLS */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{metricLabel} Growth</p>
           </div>
+
+          <div className="flex items-center gap-4">
+            <h2 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">
+              {kpis.latest.toLocaleString("en-US")}
+            </h2>
+            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black transition-colors ${kpis.isPositive ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"
+              }`}>
+              {kpis.percent !== null && (
+                <span>{kpis.isPositive ? "▲" : "▼"} {Math.abs(kpis.percent)}%</span>
+              )}
+            </div>
+          </div>
+
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+            {kpis.difference >= 0 ? "+" : ""}{kpis.difference.toLocaleString("en-US")} {metricLabel.toLowerCase()} last <span className="text-indigo-600 dark:text-indigo-400">{range} days</span>
+          </p>
         </div>
 
-        {/* CONTROLS */}
-        <div className="flex flex-wrap gap-3">
+        {/* COMPACT CONTROLS AREA */}
+        <div className="flex flex-wrap items-center gap-2 bg-slate-100/50 dark:bg-slate-800/20 p-1.5 rounded-2xl border border-slate-200/50 dark:border-slate-700/30">
 
-          <div className="flex rounded-lg bg-gray-100 dark:bg-zinc-800 p-1">
+          {/* METRIC TOGGLE */}
+          <div className="flex p-0.5 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200/60 dark:border-slate-800/60">
             {(["subscribers", "views"] as MetricType[]).map((m) => (
               <button
                 key={m}
                 onClick={() => setMetric(m)}
-                className={`px-3 py-1 text-sm rounded-md transition ${metric === m
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-600 dark:text-gray-400"
+                className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${metric === m ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   }`}
               >
-                {m === "subscribers" ? "Subscribers" : "Views"}
+                {m === "subscribers" ? "Subs" : "Views"}
               </button>
             ))}
           </div>
 
-          <div className="flex rounded-lg bg-gray-100 dark:bg-zinc-800 p-1">
+          {/* RANGE TOGGLE */}
+          <div className="flex p-0.5 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200/60 dark:border-slate-800/60">
             {[7, 14, 30].map((r) => (
               <button
                 key={r}
                 onClick={() => setRange(r as RangeType)}
-                className={`px-3 py-1 text-sm rounded-md transition ${range === r
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-600 dark:text-gray-400"
+                className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${range === r ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-400"
                   }`}
               >
-                {r}d
-              </button>
-            ))}
-          </div>
-          <div className="flex rounded-lg bg-gray-100 dark:bg-zinc-800 p-1">
-            {(["absolute", "percent"] as ViewMode[]).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`px-3 py-1 text-sm rounded-md transition ${viewMode === mode
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-600 dark:text-gray-400"
-                  }`}
-              >
-                {mode === "absolute" ? "Absolute" : "% Growth"}
+                {r}D
               </button>
             ))}
           </div>
 
+          {/* VIEW MODE */}
+          <button
+            onClick={() => setViewMode(viewMode === "absolute" ? "percent" : "absolute")}
+            className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 border ${viewMode === "percent"
+              ? "bg-indigo-600/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400"
+              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500"
+              }`}
+          >
+            {viewMode === "absolute" ? "% Growth" : "Abs"}
+          </button>
         </div>
       </div>
 
-      {/* CHART */}
-      <div className="h-80">
+      {/* CHART CONTAINER */}
+      <div className="h-[400px] w-full pt-4">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={transformedData}>
-            <CartesianGrid strokeDasharray="3 3" />
-
+          <AreaChart data={transformedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradientColor" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.1)" />
             <XAxis
               dataKey="date"
-              interval="preserveStartEnd"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
+              dy={15}
+              tickFormatter={(str) => {
+                const date = new Date(str);
+                return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              }}
             />
-
             <YAxis
-              width={80}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
               domain={yDomain}
-              tickFormatter={(value) =>
-                typeof value === "number"
-                  ? viewMode === "percent"
-                    ? `${value.toFixed(0)}%`
-                    : formatCompact(value)
-                  : ""
-              }
+              tickFormatter={(val) => viewMode === "percent" ? `${val}%` : formatCompact(val)}
             />
-
             <Tooltip
-              formatter={(value: number | string | undefined) => {
-                if (typeof value === "number") {
-                  return value.toLocaleString();
-                }
-                return value ?? "";
-              }}
               contentStyle={{
-                borderRadius: "12px",
-                border: "1px solid #e5e7eb",
+                borderRadius: "20px",
+                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                backdropFilter: "blur(10px)",
+                padding: "16px",
+                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
               }}
+              itemStyle={{ color: "#fff", fontWeight: 800, fontSize: "14px" }}
+              labelStyle={{ color: "#94a3b8", fontWeight: 800, fontSize: "10px", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "8px" }}
+              cursor={{ stroke: "#6366f1", strokeWidth: 2, strokeDasharray: "5 5" }}
             />
-
-            <Line
+            <Area
               type="monotone"
               dataKey={viewMode === "absolute" ? metric : "percent"}
               stroke="#6366f1"
-              strokeWidth={3}
-              dot={false}
-              activeDot={{ r: 5 }}
-              animationDuration={350}
+              strokeWidth={4}
+              fillOpacity={1}
+              fill="url(#gradientColor)"
+              animationDuration={1500}
+              activeDot={{ r: 8, fill: "#6366f1", stroke: "#fff", strokeWidth: 3 }}
             />
-
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>

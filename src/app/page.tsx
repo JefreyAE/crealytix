@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 export default function HomePage() {
@@ -60,9 +61,13 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/50 bg-white/70 backdrop-blur-xl dark:bg-slate-950/70 dark:border-slate-800/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-              C
-            </div>
+            <Image
+              src="/Brand logo.png"
+              alt="Crealytix Logo"
+              width={32}
+              height={32}
+              className="rounded-lg shadow-lg group-hover:scale-110 transition-transform"
+            />
             <span className="text-xl font-bold tracking-tight">Crealytix</span>
           </Link>
 
@@ -202,7 +207,9 @@ export default function HomePage() {
                     {/* TikTok Card */}
                     <div className="group rounded-2xl p-6 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300">
                       <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-black text-white flex items-center justify-center mb-4 border border-slate-700">
-                        TK
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z" />
+                        </svg>
                       </div>
                       <p className="text-sm text-slate-500 mb-1">Followers</p>
                       <p className="text-3xl font-black text-slate-900 dark:text-white leading-none mb-2">
@@ -301,17 +308,21 @@ export default function HomePage() {
       <footer className="py-12 px-6 border-t border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-              C
-            </div>
+            <Image
+              src="/Brand logo.png"
+              alt="Crealytix Logo"
+              width={24}
+              height={24}
+              className="rounded-md"
+            />
             <span className="font-bold tracking-tight text-slate-900 dark:text-white">Crealytix</span>
           </div>
 
           <div className="flex gap-8 text-sm text-slate-500 dark:text-slate-400">
             <Link href="#" className="hover:text-indigo-600 transition-colors">Twitter</Link>
             <Link href="#" className="hover:text-indigo-600 transition-colors">LinkedIn</Link>
-            <Link href="#" className="hover:text-indigo-600 transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-indigo-600 transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-indigo-600 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-indigo-600 transition-colors">Terms</Link>
           </div>
 
           <div className="text-sm text-slate-400">

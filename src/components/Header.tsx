@@ -1,4 +1,5 @@
 import PlanBadge from "./PlanBadge";
+import Link from "next/link";
 
 export default function Header({
   plan,
@@ -8,32 +9,35 @@ export default function Header({
   isLimitReached: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-slate-200/60 dark:border-slate-800/60">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-gray-500">
-          Manage your connected accounts
-        </p>
+        <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+          Overview
+        </h2>
+        <div className="flex items-center gap-3">
+          <PlanBadge plan={plan} />
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+            You are managing <span className="text-indigo-600 dark:text-indigo-400 font-bold">your social reach</span>
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <PlanBadge plan={plan} />
-
+      <div className="flex items-center gap-3">
         {!isLimitReached && (
-          <a
+          <Link
             href="/dashboard/connect"
-            className="rounded-lg bg-black px-4 py-2 text-white hover:bg-gray-800 transition"
+            className="flex-1 md:flex-none px-6 py-3 rounded-2xl bg-indigo-600 text-white font-bold transition-all duration-300 hover:scale-[1.05] hover:shadow-lg hover:shadow-indigo-600/20 active:scale-[0.98] text-center"
           >
-            + Add Account
-          </a>
+            + Add New Account
+          </Link>
         )}
 
-        <a
+        <Link
           href="/pricing"
-          className="rounded-lg border px-4 py-2 font-medium hover:bg-gray-100 transition"
+          className="flex-1 md:flex-none px-6 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold transition-all duration-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-center"
         >
-          Manage Plan
-        </a>
+          View Plans
+        </Link>
       </div>
     </div>
   );

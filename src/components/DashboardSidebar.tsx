@@ -42,77 +42,84 @@ export default function DashboardSidebar({
 
   return (
     <aside
-      className={`${collapsed ? "w-20" : "w-64"
-        } transition-all duration-300 bg-white dark:bg-[#111827] border-r dark:border-gray-800 flex flex-col justify-between`}
+      className={`
+        ${collapsed ? "w-20" : "w-72"} 
+        transition-all duration-500 ease-in-out
+        relative z-30 flex flex-col
+        bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl
+        border-r border-slate-200/60 dark:border-slate-800/60
+      `}
     >
-      <div className="p-6">
-        {/* USER */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between">
-            {!collapsed && (
-              <div className="flex items-center gap-3">
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt="avatar"
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover border"
-                  />
-                ) : (
-                  <div className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-600 text-white font-semibold">
-                    {initial}
-                  </div>
-                )}
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        {/* BRAND LOGO */}
+        <div className={`mb-12 flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}>
+          <div className="relative group">
+            <div className="absolute inset-0 bg-indigo-500/20 blur-lg rounded-xl dark:opacity-50" />
+            <Image
+              src="/Brand logo.png"
+              alt="Crealytix Logo"
+              width={collapsed ? 36 : 40}
+              height={collapsed ? 36 : 40}
+              className="relative rounded-xl shadow-lg shrink-0 group-hover:scale-110 transition-transform duration-300"
+            />
+          </div>
+          {!collapsed && (
+            <span className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">Crealytix</span>
+          )}
+        </div>
 
-                <div>
-                  <p className="font-medium text-sm truncate max-w-[120px]">
-                    {displayName}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {plan} plan
-                  </p>
+        {/* USER PROFILE */}
+        <div className={`mb-10 animate-reveal`}>
+          <div className={`flex items-center gap-4 p-3 rounded-2xl bg-slate-100/50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/30 ${collapsed ? "justify-center" : ""}`}>
+            <div className="relative shrink-0">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt="avatar"
+                  width={40}
+                  height={40}
+                  className="rounded-xl object-cover ring-2 ring-indigo-500/20"
+                />
+              ) : (
+                <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white font-black shadow-lg shadow-indigo-600/20">
+                  {initial}
+                </div>
+              )}
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full" />
+            </div>
+
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                  {displayName}
+                </p>
+                <div className="flex items-center gap-1.5 capitalize text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                  <span className="w-1 h-1 rounded-full bg-current" />
+                  {plan} user
                 </div>
               </div>
             )}
-
-            <button
-              onClick={() => setCollapsed((prev) => !prev)}
-              className="text-gray-500 hover:text-gray-800 dark:hover:text-white transition"
-            >
-              ☰
-            </button>
           </div>
 
-          {/* USAGE */}
           {!collapsed && accountLimit !== Infinity && (
-            <div className="mt-6">
-              <p className="text-xs text-gray-500 mb-2">
-                Accounts Used
-              </p>
-
-              <div className="w-full bg-gray-200 dark:bg-zinc-800 rounded-full h-2">
+            <div className="mt-6 px-1">
+              <div className="flex justify-between items-end mb-2">
+                <p className="text-[10px] uppercase tracking-widest font-black text-slate-400">Quota</p>
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{accountCount} / {accountLimit}</p>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-indigo-600 h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(79,70,229,0.5)]"
                   style={{ width: `${usagePercent}%` }}
                 />
               </div>
-
-              <p className="text-xs mt-2 text-gray-500">
-                {accountCount} / {accountLimit}
-              </p>
             </div>
-          )}
-
-          {!collapsed && accountLimit === Infinity && (
-            <p className="text-xs mt-6 text-gray-500">
-              Unlimited accounts
-            </p>
           )}
         </div>
 
         {/* NAVIGATION */}
-        <nav className="space-y-2">
+        <nav className="space-y-1.5">
+          <p className={`text-[10px] uppercase tracking-widest font-black text-slate-400 mb-4 px-3 ${collapsed ? "text-center" : ""}`}>Menu</p>
           {navItems.map((item) => {
             const isActive =
               item.href === "/dashboard"
@@ -123,12 +130,21 @@ export default function DashboardSidebar({
               <Link
                 key={item.name}
                 href={item.href}
-                className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${isActive
-                    ? "bg-indigo-600 text-white"
-                    : "hover:bg-gray-100 dark:hover:bg-zinc-800"
-                  }`}
+                className={`
+                  flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition-all duration-300 group
+                  ${isActive
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                  }
+                `}
               >
+                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isActive ? "bg-white scale-100" : "bg-transparent scale-0 group-hover:bg-indigo-400 group-hover:scale-100"}`} />
                 {!collapsed && item.name}
+                {collapsed && (
+                  <div className="w-full flex justify-center">
+                    <span className="text-lg">{item.name[0]}</span>
+                  </div>
+                )}
               </Link>
             );
           })}
@@ -136,7 +152,13 @@ export default function DashboardSidebar({
       </div>
 
       {/* FOOTER */}
-      <div className="p-6 border-t dark:border-gray-800">
+      <div className="p-6 border-t border-slate-200/60 dark:border-slate-800/60 flex flex-col gap-4">
+        <button
+          onClick={() => setCollapsed((prev) => !prev)}
+          className="w-full py-2 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          {collapsed ? "→" : "← Collapse Sidebar"}
+        </button>
         <LogoutButton />
       </div>
     </aside>
