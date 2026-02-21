@@ -26,10 +26,17 @@ async function exchangeCodeForToken(code: string) {
 
   const data = await res.json();
 
-  if (!res.ok) {
-    console.error("TikTok token error:", data);
-    throw new Error("Failed to exchange code");
+  if (!res.ok || data.error) {
+    console.error("TikTok token error:", JSON.stringify(data, null, 2));
+    throw new Error(`Failed to exchange code: ${data.error_description || data.error || "Unknown error"}`);
   }
+
+  if (!data.access_token) {
+    console.error("TikTok token response missing access_token:", JSON.stringify(data, null, 2));
+    throw new Error("Failed to exchange code: No access_token in response");
+  }
+
+  console.log("TikTok token exchange success, token starts with:", data.access_token?.substring(0, 10) + "...");
 
   return data;
 }
@@ -50,9 +57,19 @@ async function fetchTikTokUserInfo(accessToken: string) {
 
   const data = await res.json();
 
-  if (!res.ok || data.error) {
-    console.error("TikTok user info error:", JSON.stringify(data, null, 2));
-    throw new Error(`Failed to fetch user info: ${data.error?.message || "Unknown error"}`);
+  // TikTok API v2 can return errors in different formats:
+  // - { error: { code: "...", message: "..." } }
+  // - { error: "string_error", error_description: "..." }
+  const apiError = data.error;
+  const hasError = !res.ok || (apiError && (typeof apiError === "string" || apiError.code));
+
+  if (hasError) {
+    console.error("TikTok user info error (status", res.status, "):", JSON.stringify(data, null, 2));
+    const errorMsg =
+      typeof apiError === "string"
+        ? apiError
+        : apiError?.message || apiError?.code || `HTTP ${res.status}`;
+    throw new Error(`Failed to fetch user info: ${errorMsg}`);
   }
 
   if (!data.data || !data.data.user) {
