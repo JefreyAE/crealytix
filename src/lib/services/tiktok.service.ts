@@ -123,6 +123,15 @@ export async function connectTikTokOAuthAccount(
       })
       .eq("id", existing.id);
 
+    // Insert a fresh stat snapshot on reconnect
+    await insertTikTokDailyStat({
+      account_id: existing.id,
+      follower_count: userInfo.follower_count ?? 0,
+      following_count: userInfo.following_count ?? 0,
+      like_count: userInfo.likes_count ?? 0,
+      video_count: userInfo.video_count ?? 0,
+    });
+
     return existing;
   }
 
