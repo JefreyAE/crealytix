@@ -29,10 +29,10 @@ export async function getDashboardData(userId: string) {
 
   // Process YouTube Stats
   for (const channel of channels) {
-    const stats = await getChannelStats(channel.id, 30);
+    const stats = await getChannelStats(channel.id, 60); // Fetch more so we can deduplicate properly
 
     statsByChannel[channel.id] = stats.map((stat) => ({
-      date: formatChartDate(stat.recorded_at),
+      date: stat.recorded_at,
       subscribers: Number(stat.subscriber_count),
       views: Number(stat.view_count),
     }));
@@ -40,13 +40,12 @@ export async function getDashboardData(userId: string) {
 
   // Process TikTok Stats
   for (const account of tiktokAccounts) {
-    const stats = await getTikTokAccountStats(account.id, 30);
+    const stats = await getTikTokAccountStats(account.id, 60); // Fetch more so we can deduplicate properly
 
     statsByChannel[account.id] = stats.map((stat) => ({
-      date: formatChartDate(stat.recorded_at),
-      followers: Number(stat.follower_count),
-      likes: Number(stat.like_count),
-      videos: Number(stat.video_count),
+      date: stat.recorded_at, // Pass raw date, we'll format in component
+      subscribers: Number(stat.follower_count),
+      views: Number(stat.like_count),
     }));
   }
 

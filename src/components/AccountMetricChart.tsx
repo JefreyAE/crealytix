@@ -38,8 +38,30 @@ export default function AccountMetricChart({ data }: Props) {
 
   const filteredData = useMemo(() => {
     if (!data?.length) return [];
-    return data.slice(-range);
-  }, [data, range]);
+
+    // Group by local date (YYYY-MM-DD) and keep the max value for the current metric
+    const dailyMaxMap = new Map<string, DataPoint>();
+
+    data.forEach((point) => {
+      if (!point.date) return;
+      const d = new Date(point.date);
+      if (isNaN(d.getTime())) return;
+
+      // Generate a local YYYY-MM-DD key to avoid timezone shifts
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+      const existing = dailyMaxMap.get(dateKey);
+      if (!existing || point[metric] > existing[metric]) {
+        dailyMaxMap.set(dateKey, point);
+      }
+    });
+
+    // Convert to sorted array
+    const sorted = Array.from(dailyMaxMap.values())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return sorted.slice(-range);
+  }, [data, range, metric]);
 
   const transformedData = useMemo<TransformedDataPoint[]>(() => {
     if (!filteredData.length) return [];
@@ -53,15 +75,21 @@ export default function AccountMetricChart({ data }: Props) {
   }, [filteredData, metric, viewMode]);
 
   const yDomain = useMemo(() => {
-    if (!transformedData.length) return [0, 0];
+    if (!transformedData.length) return [0, 100];
     const values = viewMode === "absolute"
       ? transformedData.map((d) => d[metric])
       : transformedData.map((d) => d.percent ?? 0);
     const min = Math.min(...values);
     const max = Math.max(...values);
-    if (min === max) return [min - 1, max + 1];
-    const padding = (max - min) * 0.2;
-    return [Math.floor(min - padding), Math.ceil(max + padding)];
+
+    if (min === max) {
+      if (min === 0) return [0, 100];
+      const offset = Math.max(10, Math.abs(min) * 0.1);
+      return [Math.max(0, Math.floor(min - offset)), Math.ceil(max + offset)];
+    }
+
+    const padding = (max - min) * 0.15;
+    return [Math.max(0, Math.floor(min - padding)), Math.ceil(max + padding)];
   }, [transformedData, metric, viewMode]);
 
   const kpis = useMemo(() => {
@@ -74,8 +102,8 @@ export default function AccountMetricChart({ data }: Props) {
   }, [filteredData, metric]);
 
   const formatCompact = (value: number) => {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+    if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+    if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(value % 1_000 === 0 ? 0 : 1)}K`;
     return value.toLocaleString("en-US");
   };
 
@@ -163,8 +191,8 @@ export default function AccountMetricChart({ data }: Props) {
       </div>
 
       {/* CHART CONTAINER */}
-      <div className="h-[400px] w-full pt-4">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-[400px] w-full pt-4 min-h-[300px]">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <AreaChart data={transformedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="gradientColor" x1="0" y1="0" x2="0" y2="1">
@@ -180,7 +208,9 @@ export default function AccountMetricChart({ data }: Props) {
               tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
               dy={15}
               tickFormatter={(str) => {
+                if (!str) return "";
                 const date = new Date(str);
+                if (isNaN(date.getTime())) return "";
                 return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
               }}
             />
