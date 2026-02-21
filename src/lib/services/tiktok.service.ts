@@ -50,9 +50,14 @@ async function fetchTikTokUserInfo(accessToken: string) {
 
   const data = await res.json();
 
-  if (!res.ok) {
-    console.error("TikTok user info error:", data);
-    throw new Error("Failed to fetch user info");
+  if (!res.ok || data.error) {
+    console.error("TikTok user info error:", JSON.stringify(data, null, 2));
+    throw new Error(`Failed to fetch user info: ${data.error?.message || "Unknown error"}`);
+  }
+
+  if (!data.data || !data.data.user) {
+    console.error("TikTok user info unexpected format:", JSON.stringify(data, null, 2));
+    throw new Error("Failed to fetch user info: Unexpected response format");
   }
 
   return data.data.user;
@@ -132,28 +137,28 @@ async function refreshTikTokToken(refreshToken: string) {
 
   const data = await res.json();
 
-  if (!res.ok) {
-    console.error("TikTok refresh error:", data);
-    throw new Error("Failed to refresh token");
+  if (!res.ok || data.error || !data.expires_in) {
+    console.error("TikTok refresh error:", JSON.stringify(data, null, 2));
+    throw new Error(`Failed to refresh token: ${data.error_description || data.message || "Unknown error"}`);
   }
 
   return data;
 }
 
 
-export async function ensureValidTikTokToken(account: any) {
-  if (!account.token_expires_at) {
+export async function ensureValidTikTokToken(account: any, forceRefresh = false) {
+  if (!account.token_expires_at && !forceRefresh) {
     return account.access_token;
   }
 
   const isExpired =
     new Date(account.token_expires_at).getTime() <= Date.now();
 
-  if (!isExpired) {
+  if (!isExpired && !forceRefresh) {
     return account.access_token;
   }
 
-  console.log("Refreshing TikTok token for account:", account.id);
+  console.log("Refreshing TikTok token for account:", account.id, forceRefresh ? "(FORCED)" : "(EXPIRED)");
 
   const newTokenData = await refreshTikTokToken(
     account.refresh_token
@@ -178,9 +183,16 @@ export async function ensureValidTikTokToken(account: any) {
 }
 
 export async function refreshTikTokAccountData(account: any) {
-  const validToken = await ensureValidTikTokToken(account);
+  let validToken = await ensureValidTikTokToken(account);
 
-  const userInfo = await fetchTikTokUserInfo(validToken);
+  let userInfo;
+  try {
+    userInfo = await fetchTikTokUserInfo(validToken);
+  } catch (error) {
+    console.error("Failed to fetch TikTok user info, trying to refresh token...", error);
+    validToken = await ensureValidTikTokToken(account, true);
+    userInfo = await fetchTikTokUserInfo(validToken);
+  }
 
   const supabase = await createSupabaseServerClient();
 

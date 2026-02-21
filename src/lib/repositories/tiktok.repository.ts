@@ -50,3 +50,21 @@ export async function getUserTikTokAccounts(userId: string) {
 
   return data ?? [];
 }
+
+export async function getTikTokAccountStats(
+  accountId: string,
+  limit = 14
+) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("tiktok_account_stats")
+    .select("recorded_at, follower_count, like_count, video_count")
+    .eq("account_id", accountId)
+    .order("recorded_at", { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return data ?? [];
+}

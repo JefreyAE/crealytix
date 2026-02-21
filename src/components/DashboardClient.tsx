@@ -30,28 +30,36 @@ export default function DashboardClient({
             {/* CARDS */}
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                 {channels.map((channel) => {
-                    const platform = "youtube"
-                    return(
-                    <div key={channel.id} className="space-y-3">
-                        {/* Card clickable SOLO para seleccionar */}
-                        <div
-                            onClick={() => setSelectedChannelId(channel.id)}
-                            className="cursor-pointer"
-                        >
-                            <MetricCard
-                                key={channel.id}
-                                title={channel.title}
-                                thumbnail_url={channel.thumbnail_url}
-                                value={formatNumber(channel.subscriber_count)}
-                                description={`${formatNumber(channel.view_count)} views`}
-                                selected={selectedChannelId === channel.id}
-                                onSelect={() => setSelectedChannelId(channel.id)}
-                                href={`/dashboard/youtube/${channel.id}`}
-                                platform={platform}
-                            />
+                    const isTikTok = channel.platform === 'tiktok';
+                    const href = isTikTok ? `/dashboard/tiktok/${channel.id}` : `/dashboard/youtube/${channel.id}`;
+
+                    // Format values based on platform
+                    const value = isTikTok ? formatNumber(channel.follower_count) : formatNumber(channel.subscriber_count);
+                    const description = isTikTok ? `${formatNumber(channel.like_count)} likes` : `${formatNumber(channel.view_count)} views`;
+                    const platform = isTikTok ? 'tiktok' : 'youtube';
+
+                    return (
+                        <div key={channel.id} className="space-y-3">
+                            {/* Card clickable SOLO para seleccionar */}
+                            <div
+                                onClick={() => setSelectedChannelId(channel.id)}
+                                className="cursor-pointer"
+                            >
+                                <MetricCard
+                                    key={channel.id}
+                                    title={channel.title}
+                                    thumbnail_url={channel.thumbnail_url}
+                                    value={value}
+                                    description={description}
+                                    selected={selectedChannelId === channel.id}
+                                    onSelect={() => setSelectedChannelId(channel.id)}
+                                    href={href}
+                                    platform={platform}
+                                />
+                            </div>
                         </div>
-                    </div>
-                )})}
+                    )
+                })}
             </div>
 
             {/* CHART */}
