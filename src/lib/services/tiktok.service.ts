@@ -86,8 +86,27 @@ export async function connectTikTokOAuthAccount(
     userInfo.open_id
   );
 
+  // If the account already exists, update tokens and stats (reconnect flow)
   if (existing) {
-    throw new Error("Account already connected");
+    const supabase = await createSupabaseServerClient();
+
+    await supabase
+      .from("tiktok_accounts")
+      .update({
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        token_expires_at: expiresAt,
+        display_name: userInfo.display_name,
+        avatar_url: userInfo.avatar_url,
+        follower_count: userInfo.follower_count ?? 0,
+        following_count: userInfo.following_count ?? 0,
+        like_count: userInfo.likes_count ?? 0,
+        video_count: userInfo.video_count ?? 0,
+        last_synced_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+
+    return existing;
   }
 
   const inserted = await insertTikTokAccount({

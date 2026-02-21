@@ -5,6 +5,15 @@ import { connectTikTokOAuthAccount } from "@/lib/services/tiktok.service";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
+  const error = searchParams.get("error");
+
+  // TikTok puede redirigir con un error (ej: user denied access)
+  if (error) {
+    console.error("TikTok OAuth error:", error, searchParams.get("error_description"));
+    return NextResponse.redirect(
+      new URL(`/dashboard?error=tiktok&reason=${encodeURIComponent(error)}`, req.url)
+    );
+  }
 
   if (!code) {
     return NextResponse.json(
@@ -24,12 +33,15 @@ export async function GET(req: Request) {
   }
 
   try {
-    await connectTikTokOAuthAccount(user.id, code);
+    const account = await connectTikTokOAuthAccount(user.id, code);
 
-    return NextResponse.redirect(new URL("/dashboard", req.url));
-  } catch (error) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=tiktok", req.url)
+      new URL(`/dashboard/tiktok/${account.id}`, req.url)
+    );
+  } catch (err: any) {
+    console.error("TikTok callback error:", err);
+    return NextResponse.redirect(
+      new URL(`/dashboard?error=tiktok&reason=${encodeURIComponent(err.message || "unknown")}`, req.url)
     );
   }
 }
