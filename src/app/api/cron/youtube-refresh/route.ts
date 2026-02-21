@@ -3,8 +3,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { refreshChannelIfNeeded } from "@/lib/services/youtube.service";
 import { refreshTikTokAccountData } from "@/lib/services/tiktok.service";
 
-const supabase = await createSupabaseServerClient();
-
 export async function GET(req: Request) {
   const isLocal = process.env.NODE_ENV === "development";
   // 🔐 Seguridad básica
@@ -19,30 +17,31 @@ export async function GET(req: Request) {
     }
   }
 
-  // 🔎 Traer todos los canales
+  const supabase = await createSupabaseServerClient();
+
+  // 🔎 Refrescar canales de YouTube
   const { data: channels } = await supabase
     .from("youtube_channels")
     .select("*");
 
-  if (!channels?.length) {
-    return NextResponse.json({ success: true });
+  if (channels?.length) {
+    for (const channel of channels) {
+      await refreshChannelIfNeeded(channel);
+    }
   }
 
-  for (const channel of channels) {
-    await refreshChannelIfNeeded(channel);
+  // 🔎 Refrescar cuentas de TikTok
+  const { data: tiktokAccounts } = await supabase
+    .from("tiktok_accounts")
+    .select("*");
+
+  for (const account of tiktokAccounts ?? []) {
+    try {
+      await refreshTikTokAccountData(account);
+    } catch (err) {
+      console.error("TikTok refresh failed:", err);
+    }
   }
 
   return NextResponse.json({ success: true });
-}
-
-const { data: tiktokAccounts } = await supabase
-  .from("tiktok_accounts")
-  .select("*");
-
-for (const account of tiktokAccounts ?? []) {
-  try {
-    await refreshTikTokAccountData(account);
-  } catch (err) {
-    console.error("TikTok refresh failed:", err);
-  }
 }
