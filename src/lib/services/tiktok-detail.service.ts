@@ -65,13 +65,9 @@ export async function getTikTokDetailData(
 
     const chartData =
         stats?.map((stat) => ({
-            date: new Date(stat.recorded_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-            }),
-            followers: Number(stat.follower_count),
-            likes: Number(stat.like_count),
-            videos: Number(stat.video_count),
+            date: stat.recorded_at,
+            subscribers: Number(stat.follower_count),
+            views: Number(stat.like_count),
         })) ?? [];
 
     return {
