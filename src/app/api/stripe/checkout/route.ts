@@ -52,6 +52,9 @@ export async function POST(req: Request) {
             mode: "subscription",
             success_url: `${req.headers.get("origin")}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${req.headers.get("origin")}/pricing`,
+            metadata: {
+                supabaseUUID: user.id,
+            },
             subscription_data: {
                 metadata: {
                     supabaseUUID: user.id,
