@@ -26,12 +26,26 @@ export default function PricingClient({
     useState<Plan | null>(null);
 
   const handlePlanChange = async (newPlan: Plan) => {
+    if (!isLoggedIn) {
+      router.push("/login?redirect=/pricing");
+      return;
+    }
+
+    const planConfig = PLANS.find(p => p.key === newPlan);
+    const downgrade = isDowngrade(currentPlan, newPlan);
+
+    if (downgrade || newPlan === 'free') {
+      // Downgrades should ideally happen in the Stripe Customer Portal
+      handleOpenPortal();
+      return;
+    }
+
     setLoading(newPlan);
     try {
-      const res = await fetch("/api/plan/update", {
+      const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: newPlan }),
+        body: JSON.stringify({ priceId: planConfig?.priceId }),
       });
 
       const data = await res.json();
@@ -40,11 +54,31 @@ export default function PricingClient({
         setLoading(null);
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
     } catch {
       setErrorMessage("Network error. Please try again.");
       setLoading(null);
+    }
+  };
+
+  const handleOpenPortal = async () => {
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        setErrorMessage(data.error || "Could not open billing portal.");
+      }
+    } catch {
+      setErrorMessage("Network error. Please try again.");
     }
   };
 

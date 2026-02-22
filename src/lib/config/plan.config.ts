@@ -11,6 +11,7 @@ export const PLANS = [
       "Basic analytics",
       "Weekly growth tracking",
     ],
+    priceId: "", // Free plan doesn't need checkout
   },
   {
     name: "Pro",
@@ -24,6 +25,7 @@ export const PLANS = [
       "Priority support",
     ],
     highlight: true,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || "price_pro_placeholder",
   },
   {
     name: "Agency",
@@ -36,5 +38,6 @@ export const PLANS = [
       "Team management",
       "Future AI tools",
     ],
+    priceId: process.env.NEXT_PUBLIC_STRIPE_AGENCY_PRICE_ID || "price_agency_placeholder",
   },
 ];
