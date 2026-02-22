@@ -43,6 +43,7 @@ export async function POST(req: Request) {
 
         const session = await stripe.checkout.sessions.create({
             customer: stripeCustomerId,
+            client_reference_id: user.id, // 🎯 High-reliability backup for User ID
             line_items: [
                 {
                     price: priceId,

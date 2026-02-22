@@ -22,17 +22,24 @@ export async function POST(req: Request) {
     const supabase = await createSupabaseAdminClient();
 
     console.log("🔔 Stripe Webhook received:", event.type);
+    console.log("🔑 Service Role Key starts with:", process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 4) + "...");
 
     switch (event.type) {
         case "checkout.session.completed": {
             const session = event.data.object as any;
-            const supabaseUUID = session.metadata?.supabaseUUID;
+            // 🎯 Fallback logic: check both metadata and client_reference_id
+            const supabaseUUID = session.metadata?.supabaseUUID || session.client_reference_id;
 
-            console.log("📦 Checkout Session Metadata:", session.metadata);
+            console.log("📦 Checkout Session Data:", {
+                id: session.id,
+                customer: session.customer,
+                client_reference_id: session.client_reference_id,
+                metadata: session.metadata
+            });
 
             if (supabaseUUID) {
-                console.log("👤 Updating profile for user:", supabaseUUID);
-                const { error: updateError } = await supabase
+                console.log("👤 Attempting to update profile for user:", supabaseUUID);
+                const { data: updated, error: updateError } = await supabase
                     .from("profiles")
                     .update({
                         stripe_customer_id: session.customer as string,
@@ -40,15 +47,18 @@ export async function POST(req: Request) {
                         subscription_status: "active",
                         plan: "pro",
                     })
-                    .eq("id", supabaseUUID);
+                    .eq("id", supabaseUUID)
+                    .select();
 
                 if (updateError) {
-                    console.error("❌ Error updating profile:", updateError);
+                    console.error("❌ Supabase Update Error:", updateError);
+                } else if (updated && updated.length > 0) {
+                    console.log("✅ Profile updated successfully:", updated[0].email);
                 } else {
-                    console.log("✅ Profile updated successfully");
+                    console.warn("⚠️ No profile found with ID:", supabaseUUID);
                 }
             } else {
-                console.warn("⚠️ No supabaseUUID found in session metadata");
+                console.warn("⚠️ No user ID (supabaseUUID or client_reference_id) in session");
             }
             break;
         }
