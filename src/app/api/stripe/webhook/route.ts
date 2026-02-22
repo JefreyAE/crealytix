@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -39,13 +40,15 @@ export async function POST(req: Request) {
 
             if (supabaseUUID) {
                 console.log("👤 Attempting to update profile for user:", supabaseUUID);
+                const plan = session.metadata?.plan || "pro"; // 🎯 Dynamic plan from metadata
+
                 const { data: updated, error: updateError } = await supabase
                     .from("profiles")
                     .update({
                         stripe_customer_id: session.customer as string,
                         stripe_subscription_id: session.subscription as string,
                         subscription_status: "active",
-                        plan: "pro",
+                        plan: plan,
                     })
                     .eq("id", supabaseUUID)
                     .select();
@@ -54,6 +57,8 @@ export async function POST(req: Request) {
                     console.error("❌ Supabase Update Error:", updateError);
                 } else if (updated && updated.length > 0) {
                     console.log("✅ Profile updated successfully:", updated[0].email);
+                    revalidatePath("/dashboard", "layout");
+                    revalidatePath("/pricing");
                 } else {
                     console.warn("⚠️ No profile found with ID:", supabaseUUID);
                 }
@@ -71,13 +76,18 @@ export async function POST(req: Request) {
 
             if (supabaseUUID) {
                 console.log("👤 Updating subscription status for user:", supabaseUUID);
+                const plan = subscription.metadata?.plan || "pro";
+
                 await supabase
                     .from("profiles")
                     .update({
                         subscription_status: subscription.status,
-                        plan: subscription.status === "active" ? "pro" : "free",
+                        plan: subscription.status === "active" ? plan : "free",
                     })
                     .eq("id", supabaseUUID);
+
+                revalidatePath("/dashboard", "layout");
+                revalidatePath("/pricing");
             } else {
                 console.warn("⚠️ No supabaseUUID found in subscription metadata");
             }

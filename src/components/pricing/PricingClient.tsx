@@ -45,7 +45,10 @@ export default function PricingClient({
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: planConfig?.priceId }),
+        body: JSON.stringify({
+          priceId: planConfig?.priceId,
+          planKey: newPlan // 🚀 Send the plan identifier (pro, agency)
+        }),
       });
 
       const data = await res.json();

@@ -11,7 +11,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { priceId } = await req.json();
+        const { priceId, planKey } = await req.json();
 
         if (!priceId) {
             return NextResponse.json({ error: "Price ID is required" }, { status: 400 });
@@ -55,10 +55,12 @@ export async function POST(req: Request) {
             cancel_url: `${req.headers.get("origin")}/pricing`,
             metadata: {
                 supabaseUUID: user.id,
+                plan: planKey // 🚀 Dynamic plan (pro, agency)
             },
             subscription_data: {
                 metadata: {
                     supabaseUUID: user.id,
+                    plan: planKey
                 },
             },
         });
