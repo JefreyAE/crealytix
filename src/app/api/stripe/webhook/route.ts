@@ -21,8 +21,8 @@ export async function POST(req: Request) {
 
     const supabase = await createSupabaseAdminClient();
 
+    console.log("🚀 Webhook Code Version: v3 (Admin Client Fix)");
     console.log("🔔 Stripe Webhook received:", event.type);
-    console.log("🔑 Service Role Key starts with:", process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 4) + "...");
 
     switch (event.type) {
         case "checkout.session.completed": {

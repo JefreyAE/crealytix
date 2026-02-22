@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 
 export const createSupabaseServerClient = async () => {
@@ -23,17 +24,11 @@ export const createSupabaseServerClient = async () => {
   )
 }
 
+// 🔐 Admin Client for Webhooks (Direct connection, bypasses SSR/Cookies/RLS)
 export const createSupabaseAdminClient = async () => {
-  return createServerClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name) { return undefined },
-        set(name, value, options) { },
-        remove(name, options) { },
-      },
-    }
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
 
