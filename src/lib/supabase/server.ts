@@ -23,3 +23,17 @@ export const createSupabaseServerClient = async () => {
   )
 }
 
+export const createSupabaseAdminClient = async () => {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get(name) { return undefined },
+        set(name, value, options) { },
+        remove(name, options) { },
+      },
+    }
+  )
+}
+

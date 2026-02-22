@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `Webhook Error: ${error.message}` }, { status: 400 });
     }
 
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseAdminClient();
 
     console.log("🔔 Stripe Webhook received:", event.type);
 
